@@ -6,6 +6,7 @@ import pandas as pd
 from imblearn.over_sampling import SMOTE
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.metrics import (
     accuracy_score,
@@ -39,10 +40,20 @@ X_train, X_test, y_train, y_test = train_test_split(
 num_features = ["age", "fare", "sibsp", "parch"]
 cat_features = ["sex", "embarked", "pclass"]
 
+num_transformer = Pipeline([
+    ("imputer", SimpleImputer(strategy="median")),
+    ("scaler", StandardScaler())
+])
+
+cat_transformer = Pipeline([
+    ("imputer", SimpleImputer(strategy="most_frequent")),
+    ("encoder", OneHotEncoder(drop="first", handle_unknown="ignore"))
+])
+
 preprocessor = ColumnTransformer(
     transformers=[
-        ("num", StandardScaler(), num_features),
-        ("cat", OneHotEncoder(drop="first"), cat_features),
+        ("num", num_transformer, num_features),
+        ("cat", cat_transformer, cat_features),
     ]
 )
 
@@ -101,7 +112,7 @@ X_res, y_res = smote.fit_resample(X_train_prep, y_train)
 log_smote = LogisticRegression(random_state=42).fit(X_res, y_res)
 y_pred_smote = log_smote.predict(X_test_prep)
 
-print("Baseline -> Precision:", precision_score(y_test, y_pred_base), "Recall:", recall_score(y_test, y_pred_base), "F1:", f1_score(y_test, y_pred_base))
+print("\nBaseline -> Precision:", precision_score(y_test, y_pred_base), "Recall:", recall_score(y_test, y_pred_base), "F1:", f1_score(y_test, y_pred_base))
 print("Balanced -> Precision:", precision_score(y_test, y_pred_bal), "Recall:", recall_score(y_test, y_pred_bal), "F1:", f1_score(y_test, y_pred_bal))
 print("SMOTE -> Precision:", precision_score(y_test, y_pred_smote), "Recall:", recall_score(y_test, y_pred_smote), "F1:", f1_score(y_test, y_pred_smote))
 
@@ -127,7 +138,7 @@ grid = GridSearchCV(rf_pipe, param_grid, cv=5, scoring="f1", n_jobs=-1)
 grid.fit(X_train, y_train)
 
 best_pipeline = grid.best_estimator_
-print("Best Params:", grid.best_params_)
+print("\nBest Params:", grid.best_params_)
 print("OOB Score:", best_pipeline.named_steps["clf"].oob_score_)
 
 X_reg = df[["pclass", "age", "sibsp", "parch", "survived", "sex", "embarked"]]
@@ -139,8 +150,8 @@ X_reg_tr, X_reg_te, y_reg_tr, y_reg_te = train_test_split(
 
 reg_prep = ColumnTransformer(
     transformers=[
-        ("num", StandardScaler(), ["age", "sibsp", "parch", "survived"]),
-        ("cat", OneHotEncoder(drop="first"), ["sex", "embarked", "pclass"]),
+        ("num", num_transformer, ["age", "sibsp", "parch", "survived"]),
+        ("cat", cat_transformer, ["sex", "embarked", "pclass"]),
     ]
 )
 
@@ -157,7 +168,7 @@ n_features = X_reg_tr.shape[1]
 adj_r2_val = 1 - (1 - r2_val) * (n_samples - 1) / (n_samples - n_features - 1)
 
 print(
-    f"Regression -> MAE: {mae_val:.2f}, RMSE: {rmse_val:.2f}, R2: {r2_val:.4f}, Adj R2: {adj_r2_val:.4f}"
+    f"\nRegression -> MAE: {mae_val:.2f}, RMSE: {rmse_val:.2f}, R2: {r2_val:.4f}, Adj R2: {adj_r2_val:.4f}"
 )
 
 residuals = y_reg_te - y_reg_pred
@@ -187,5 +198,5 @@ sample_data = pd.DataFrame(
     ]
 )
 
-print("Sample Prediction:", loaded_model.predict(sample_data))
+print("\nSample Prediction:", loaded_model.predict(sample_data))
 print("Sample Probability:", loaded_model.predict_proba(sample_data)[:, 1])
