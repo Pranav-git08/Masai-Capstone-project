@@ -62,5 +62,7 @@ docker run -p 7860:7860 zepto-support-assistant
 
 # Tech Stack #
 ML & Analytics: Python, Pandas, Scikit-learn, Joblib, Matplotlib
+
 RAG & Orchestration: LangGraph, ChromaDB, Sentence-Transformers, Pydantic
+
 API & Deployment: FastAPI, Uvicorn, Docker
