@@ -1,4 +1,4 @@
-import joblib
+﻿import joblib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -24,6 +24,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.tree import DecisionTreeClassifier, plot_tree
 
+# Load dataset
 df = pd.read_csv("analytics/titanic.csv")
 
 if "deck" in df.columns:
@@ -33,6 +34,7 @@ df = df.dropna(subset=["embarked"])
 X = df[["pclass", "sex", "age", "sibsp", "parch", "fare", "embarked"]]
 y = df["survived"]
 
+# Stratified Split
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, random_state=42, stratify=y
 )
@@ -57,6 +59,7 @@ preprocessor = ColumnTransformer(
     ]
 )
 
+# 1. Train and evaluate classifiers
 models = {
     "Logistic Regression": LogisticRegression(random_state=42),
     "Decision Tree": DecisionTreeClassifier(max_depth=4, random_state=42),
@@ -78,12 +81,11 @@ for name, clf in models.items():
     print(f"F1 Score: {f1_score(y_test, y_pred):.4f}")
     print(f"AUC: {roc_auc_score(y_test, y_proba):.4f}")
 
-dt_pipe = Pipeline(
-    [
-        ("prep", preprocessor),
-        ("clf", DecisionTreeClassifier(max_depth=3, random_state=42)),
-    ]
-)
+# 2. Decision Tree plot
+dt_pipe = Pipeline([
+    ("prep", preprocessor),
+    ("clf", DecisionTreeClassifier(max_depth=3, random_state=42)),
+])
 dt_pipe.fit(X_train, y_train)
 
 plt.figure(figsize=(14, 8))
@@ -96,6 +98,7 @@ plot_tree(
 plt.savefig("analytics/chart_decision_tree.png")
 plt.close()
 
+# 3. Imbalance strategies comparison
 X_train_prep = preprocessor.fit_transform(X_train)
 X_test_prep = preprocessor.transform(X_test)
 
@@ -116,23 +119,22 @@ print("\nBaseline -> Precision:", precision_score(y_test, y_pred_base), "Recall:
 print("Balanced -> Precision:", precision_score(y_test, y_pred_bal), "Recall:", recall_score(y_test, y_pred_bal), "F1:", f1_score(y_test, y_pred_bal))
 print("SMOTE -> Precision:", precision_score(y_test, y_pred_smote), "Recall:", recall_score(y_test, y_pred_smote), "F1:", f1_score(y_test, y_pred_smote))
 
+# 4. Hyperparameter tuning with GridSearchCV
 param_grid = {
     "clf__n_estimators": [50, 100, 200],
     "clf__max_depth": [4, 6, 8, None],
     "clf__max_features": ["sqrt", "log2"],
 }
 
-rf_pipe = Pipeline(
-    [
-        ("prep", preprocessor),
-        (
-            "clf",
-            RandomForestClassifier(
-                oob_score=True, random_state=42, bootstrap=True
-            ),
+rf_pipe = Pipeline([
+    ("prep", preprocessor),
+    (
+        "clf",
+        RandomForestClassifier(
+            oob_score=True, random_state=42, bootstrap=True
         ),
-    ]
-)
+    ),
+])
 
 grid = GridSearchCV(rf_pipe, param_grid, cv=5, scoring="f1", n_jobs=-1)
 grid.fit(X_train, y_train)
@@ -141,6 +143,7 @@ best_pipeline = grid.best_estimator_
 print("\nBest Params:", grid.best_params_)
 print("OOB Score:", best_pipeline.named_steps["clf"].oob_score_)
 
+# 5. Regression side-task (predicting fare)
 X_reg = df[["pclass", "age", "sibsp", "parch", "survived", "sex", "embarked"]]
 y_reg = df["fare"]
 
@@ -148,9 +151,14 @@ X_reg_tr, X_reg_te, y_reg_tr, y_reg_te = train_test_split(
     X_reg, y_reg, test_size=0.2, random_state=42
 )
 
+reg_num_transformer = Pipeline([
+    ("imputer", SimpleImputer(strategy="median")),
+    ("scaler", StandardScaler())
+])
+
 reg_prep = ColumnTransformer(
     transformers=[
-        ("num", num_transformer, ["age", "sibsp", "parch", "survived"]),
+        ("num", reg_num_transformer, ["age", "sibsp", "parch", "survived"]),
         ("cat", cat_transformer, ["sex", "embarked", "pclass"]),
     ]
 )
@@ -167,9 +175,7 @@ n_samples = len(y_reg_te)
 n_features = X_reg_tr.shape[1]
 adj_r2_val = 1 - (1 - r2_val) * (n_samples - 1) / (n_samples - n_features - 1)
 
-print(
-    f"\nRegression -> MAE: {mae_val:.2f}, RMSE: {rmse_val:.2f}, R2: {r2_val:.4f}, Adj R2: {adj_r2_val:.4f}"
-)
+print(f"\nRegression -> MAE: {mae_val:.2f}, RMSE: {rmse_val:.2f}, R2: {r2_val:.4f}, Adj R2: {adj_r2_val:.4f}")
 
 residuals = y_reg_te - y_reg_pred
 plt.figure(figsize=(7, 5))
@@ -181,22 +187,20 @@ plt.title("Residual Plot")
 plt.savefig("analytics/chart_residuals.png")
 plt.close()
 
+# 6. Save joblib pipeline artifact
 joblib.dump(best_pipeline, "analytics/best_titanic_pipeline.joblib")
 
+# Confirm reloadability
 loaded_model = joblib.load("analytics/best_titanic_pipeline.joblib")
-sample_data = pd.DataFrame(
-    [
-        {
-            "pclass": 1,
-            "sex": "female",
-            "age": 29.0,
-            "sibsp": 0,
-            "parch": 0,
-            "fare": 211.33,
-            "embarked": "S",
-        }
-    ]
-)
+sample_data = pd.DataFrame([{
+    "pclass": 1,
+    "sex": "female",
+    "age": 29.0,
+    "sibsp": 0,
+    "parch": 0,
+    "fare": 211.33,
+    "embarked": "S",
+}])
 
 print("\nSample Prediction:", loaded_model.predict(sample_data))
 print("Sample Probability:", loaded_model.predict_proba(sample_data)[:, 1])
