@@ -1,3 +1,4 @@
+### Capstone project ###
 Zepto Analytics & GenAI Customer Support Assistant
 An end-to-end Machine Learning data pipeline and GenAI RAG Support Assistant built for Zepto operations. This repository contains data processing workflows, machine learning models for customer behavior analysis, and a production-ready RAG service for automated customer support.
 
@@ -28,7 +29,7 @@ Masai-Capstone-project/
 1. Module 1 & 2 — Data Pipeline, EDA & Predictive Modeling (/analytics)
 This module covers the end-to-end data processing and predictive modeling pipeline.
 
-Key Implementation Highlights:
+Key Highlights:
 Exploratory Data Analysis (01_eda.py): Automated data cleaning, missing value imputation, categorical encoding, and feature correlation analysis.
 
 Classification Pipeline (02_modeling.py): Trains and compares Logistic Regression, Decision Trees, and Random Forests using scikit-learn Pipelines. Includes handling of class imbalance via SMOTE and class_weight='balanced'.
@@ -58,7 +59,7 @@ Plaintext
         └─────────────┬─────────────┘
                       ▼
            [Pydantic JSON Response]
-Key Implementation Highlights:
+Key Highlights:
 Document Ingestion: Embeds 8 official Zepto policy documents (docs/doc_01.txt to doc_08.txt) locally using sentence-transformers/all-MiniLM-L6-v2 into a persistent ChromaDB vector store.
 
 LangGraph Orchestration (graph.py): StateGraph workflow featuring 3 nodes (classify_intent, retrieve_and_answer, direct_answer) and a conditional routing edge.
@@ -71,69 +72,57 @@ FastAPI Service (main.py): Web API exposing a POST /ask endpoint.
 
 Containerization: Dockerfile configured to serve the FastAPI application via uvicorn on port 7860.
 
-🚀 Getting Started
+🚀 Execution Guide
 Prerequisites
 Python 3.10+
 
 Git
 
-Docker Desktop (Optional, for containerized execution)
+Docker Desktop (Optional)
 
-💻 Local Setup & Execution
-1. Clone the Repository
-PowerShell
-git clone https://github.com/Pranav-git08/Masai-Capstone-project.git
-cd Masai-Capstone-project
-2. Run Analytics Pipeline (Modules 1 & 2)
-PowerShell
-# Run Exploratory Data Analysis
+1. Analytics Pipeline Execution
+Bash
 python analytics/01_eda.py
-
-# Run Model Training & Export Artifacts
 python analytics/02_modeling.py
-3. Run Support Assistant API (Module 3)
-PowerShell
-# Install dependencies
+2. Support Assistant API Execution
+Bash
 pip install -r support_assistant/requirements.txt
-
-# Set Python Path to root
-$env:PYTHONPATH="."
-
-# Launch FastAPI Server
 python -m uvicorn support_assistant.main:app --host 0.0.0.0 --port 7860 --reload
-Interactive API documentation will be available at: http://localhost:7860/docs
-
-🧪 Sample API Usage (Module 3)
+🧪 Sample API Usage
 Policy Question (Triggers Retrieval)
-PowerShell
-Invoke-RestMethod -Uri "http://localhost:7860/ask" -Method Post -ContentType "application/json" -Body '{"query": "What is the delivery fee for orders below 149?"}' | ConvertTo-Json
-Response:
-
 JSON
+// Request: POST /ask
+{
+  "query": "What is the delivery fee for orders below 149?"
+}
+
+// Response:
 {
   "answer": "Based on the retrieved context: Zepto delivers grocery and household essentials to serviceable pin codes within 10 to 30 minutes of order confirmation...",
   "sources": ["doc_01", "doc_05", "doc_03"],
   "confidence": 1.0
 }
 General Question (Direct Fallback)
-PowerShell
-Invoke-RestMethod -Uri "http://localhost:7860/ask" -Method Post -ContentType "application/json" -Body '{"query": "Tell me a joke"}' | ConvertTo-Json
-Response:
-
 JSON
+// Request: POST /ask
+{
+  "query": "Tell me a joke"
+}
+
+// Response:
 {
   "answer": "I can only answer questions about Zepto policies right now.",
   "sources": [],
   "confidence": 1.0
 }
-🐳 Running with Docker (Module 3)
-PowerShell
+🐳 Docker Deployment
+Bash
 cd support_assistant
 docker build -t zepto-support-assistant .
 docker run -p 7860:7860 zepto-support-assistant
 🛠️ Tech Stack
-Languages & Libraries: Python, Pandas, NumPy, Scikit-learn, Joblib, Matplotlib
+Machine Learning: Python, Pandas, NumPy, Scikit-learn, Joblib, Matplotlib
 
-Orchestration & GenAI: LangGraph, ChromaDB, Sentence-Transformers, Pydantic, Groq API (Optional)
+GenAI & Vector Search: LangGraph, ChromaDB, Sentence-Transformers, Pydantic
 
-API & Deployment: FastAPI, Uvicorn, Docker
+API & Containerization: FastAPI, Uvicorn, Docker
